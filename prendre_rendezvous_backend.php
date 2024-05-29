@@ -10,34 +10,33 @@ if ($conn->connect_error) {
     die("La connexion a échoué : " . $conn->connect_error);
 }
 
-// Vérifier si la clé 'id' existe dans le tableau POST
-if (isset($_POST['id'])) {
-    // Récupérer l'ID du créneau envoyé depuis le frontend
-    $id = $_POST['id'];
+// Vérifier si le créneau sélectionné a été envoyé
+if (isset($_POST['selectedSlot'])) {
+    $selectedSlot = $_POST['selectedSlot'];
 
-    // Récupérer la date de début du créneau
-    $sql = "SELECT debut, coach_id FROM disponibilites WHERE id = '$id'";
-    $result = $conn->query($sql);
-
-    if ($result->num_rows > 0) {
-        // Extraire la date de début et l'ID du coach
-        $row = $result->fetch_assoc();
-        $debut = $row['debut'];
+    // Vérifier si le créneau est disponible
+    $sqlCheck = "SELECT * FROM disponibilites WHERE debut = '$selectedSlot' AND disponible = 1";
+    $resultCheck = $conn->query($sqlCheck);
+    
+    if ($resultCheck->num_rows > 0) {
+        $row = $resultCheck->fetch_assoc();
         $coach_id = $row['coach_id'];
 
-        // Insérer le rendez-vous dans la table rendezvous
-        $sql_insert = "INSERT INTO rendezvous (date_heure, coach_id) VALUES ('$debut', '$coach_id')";
+        // Insérer le rendez-vous dans la base de données
+        $sqlInsert = "INSERT INTO rendezvous (coach_id, date_heure) VALUES ('$coach_id', '$selectedSlot')";
+        if ($conn->query($sqlInsert) === TRUE) {
+            // Mettre à jour la disponibilité du créneau
+            $sqlUpdate = "UPDATE disponibilites SET disponible = 0 WHERE debut = '$selectedSlot'";
+            $conn->query($sqlUpdate);
 
-        if ($conn->query($sql_insert) === TRUE) {
             echo "Rendez-vous créé avec succès";
         } else {
             echo "Erreur lors de la création du rendez-vous : " . $conn->error;
         }
     } else {
-        echo "Erreur : Aucune disponibilité trouvée pour le créneau sélectionné.";
+        echo "Erreur : Le créneau sélectionné n'est pas disponible.";
     }
 } else {
-    // Gérer le cas où la clé 'id' n'existe pas dans le tableau POST
     echo "Erreur : Aucun créneau n'a été sélectionné.";
 }
 
